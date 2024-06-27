@@ -1,0 +1,19 @@
+<IfModule mod_rewrite.c>
+
+# # Enable rewriting
+# RewriteEngine On
+
+#         # If an existing asset or directory is requested go to it as it is
+#         RewriteCond %{REQUEST_URI} !^/api
+#         RewriteCond %{REQUEST_FILENAME} !-f 
+#         RewriteCond %{REQUEST_FILENAME} !-d
+#         # If the requested resource doesn't exist, use index.html
+#     	RewriteRule . /frontend/index.html [L]
+
+    SetEnvIf Origin "https://fakturpajak.transmart.co.id$" AccessControlAllowOrigin=$0
+    Header add Access-Control-Allow-Origin %{AccessControlAllowOrigin}e env=AccessControlAllowOrigin
+    Header always set Access-Control-Allow-Methods "POST, GET, OPTIONS, DELETE, PUT"
+    Header always set Access-Control-Allow-Headers "X-Accept-Charset,X-Accept,Content-Type"
+    Header always set Access-Control-Max-Age "1000"
+</IfModule>
+
