@@ -1,7 +1,6 @@
 const express = require("express");
 const mysql = require("mysql2");
 const cors = require("cors");
-const oracledb = require("oracledb");
 const path = require("path"); // Import module 'path'
 const fs = require("fs");
 const csv = require("fast-csv");
@@ -16,6 +15,7 @@ const schedule = require("node-schedule");
 // const dotenv = require("dotenv");
 const authenticateToken = require("./middleware/auth.js");
 require("dotenv").config();
+const { google } = require("googleapis");
 
 const app = express();
 const port = 3001;
@@ -30,6 +30,16 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: "1024mb" }));
 app.use(cors());
 app.use(express.urlencoded({ limit: "1024mb", extended: true }));
+
+const CLIENT_ID = process.env.CLIENT_ID;
+const CLIENT_SECRET = process.env.CLIENT_SECRET;
+const REDIRECT_URI = process.env.REDIRECT_URI;
+const REFRESH_TOKEN = process.env.REFRESH_TOKEN;
+const OAuth2 = google.auth.OAuth2;
+
+const oauth2Client = new OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
+
+oauth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
 
 // app.use((req, res, next) => {
 //    res.setHeader("Access-Control-Allow-Origin", "*");
@@ -48,7 +58,7 @@ const db = mysql.createConnection({
   host: "localhost",
   port: 3306,
   user: "root",
-  password: "syahbudin",
+  password: "",
   database: "faktur-pajak",
 });
 
@@ -58,19 +68,12 @@ db.connect((err) => {
     console.error("Error connecting to MySQL database:", err);
   } else {
     //console.log('LD_LIBRARY_PATH:', process.env.LD_LIBRARY_PATH);
-    console.log("PATH:", process.env.PATH);
+    // console.log("PATH:", process.env.PATH);
     console.log("Connected to MySQL database.");
   }
 });
 
-// Konfigurasi koneksi Oracle
-const oracleConfig = {
-  user: "TRANSRETAIL",
-  password: "TRANSRETAIL",
-  connectString:
-    "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=db124.id007.trid-corp.net)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=POSSDB)))",
-  externalAuth: false,
-};
+
 
 const uploads = multer({
   limits: {
@@ -107,75 +110,70 @@ app.post(
     const TT_FOTO_NPWP = req.files["TT_FOTO_NPWP"][0];
     const TT_FOTO_TRX = req.files["TT_FOTO_TRX"][0];
 
-    // Periksa apakah ID transaksi ada dalam database Oracle
-    const checkTransactionQuery = `SELECT pt.id FROM POS_TRANSACTION pt WHERE pt.id = :TRXNO`;
-    const checkDurationQuery = `SELECT pt.id, s2.NAME STORE_NAME, trunc(pt.SALES_DATE) SALES_DATE, pt.TOTAL_AMOUNT_PAID, 
-    decode(to_char(pt.SALES_DATE,'yyyymm'),to_char(SYSDATE,'yyyymm'),'APPROVE', 
-    CASE WHEN trunc(pt.SALES_DATE) >=trunc(add_months(SYSDATE,-1), 'mm') AND trunc(SYSDATE) <= trunc(add_months(SYSDATE ,0),'MM')+9 THEN 'APPROVE' ELSE 'REJECT' END) STATUS
-    FROM POS_TRANSACTION pt 
-    JOIN STORE s2 ON s2.STORE_ID = pt.STORE_ID 
-    WHERE 1=1 
-    AND pt.id= :TRXNO`;
-    let connection;
+    // MySQL queries
+    const checkTransactionQuery = "SELECT TRXNO FROM transaksi WHERE TRXNO = ?";
+    const checkDurationQuery = `
+      SELECT 
+        TRXNO,
+        STORE_NAME,
+        DATE_FORMAT(SALES_DATE, '%Y-%m-%d') AS SALES_DATE,
+        TOTAL_AMOUNT_PAID,
+        CASE 
+          WHEN DATEDIFF(NOW(), SALES_DATE) > 90 THEN 'REJECT'
+          ELSE 'APPROVE'
+        END AS STATUS
+      FROM 
+        transaksi
+      WHERE 
+        TRXNO = ?`;
+
     try {
-      // Membuat koneksi ke Oracle
-      connection = await oracledb.getConnection(oracleConfig);
-      const checkTransactionResult = await connection.execute(
-        checkTransactionQuery,
-        { TRXNO: TT_TRXNO }
-      );
-
-      // Jika ID transaksi ditemukan dalam database Oracle
-      if (checkTransactionResult.rows.length > 0) {
-        // Periksa durasi sejak tanggal transaksi
-        const checkDurationResult = await connection.execute(
-          checkDurationQuery,
-          { TRXNO: TT_TRXNO }
-        );
-        const STATUS = checkDurationResult.rows[0][4];
-
-        if (STATUS == "REJECT") {
-          console.error(
-            `Mohon maaf permintaan faktur pajak dengan nomor struk ${TT_TRXNO} tidak bisa dibuatkan karena sudah melebihi batas ketentuan.  Lihat ketentuannya pada saat pengisian formulir faktur pajak.`
-          );
-          res.status(400).json({
-            message: `permintaan faktur pajak dengan ID ${TT_TRXNO} tidak bisa dibuatkan karena sudah melebihi batas ketentuan. `,
-          });
+      // Check if transaction exists in MySQL
+      db.query(checkTransactionQuery, [TT_TRXNO], (err, results) => {
+        if (err) {
+          console.error("Error checking transaction in MySQL:", err);
+          res.status(500).json({ message: "Internal server error" });
           return;
         }
-        // Ambil informasi terkait dari Oracle berdasarkan TRXNO
-        const oracleDataQuery = `
-            SELECT s2.NAME AS STORE_NAME, TO_CHAR(pt.SALES_DATE,'YYYY-MM-DD') AS SALES_DATE, pt.TOTAL_AMOUNT_PAID 
-            FROM POS_TRANSACTION pt 
-            LEFT JOIN STORE s2 ON s2.STORE_ID=pt.STORE_ID 
-            WHERE pt.id=:TRXNO
-         `;
-        const oracleDataResult = await connection.execute(oracleDataQuery, {
-          TRXNO: TT_TRXNO,
-        });
 
-        // Cek apakah data ditemukan di Oracle
-        if (oracleDataResult.rows.length > 0) {
-          const [oracleData] = oracleDataResult.rows;
+        if (results.length === 0) {
+          console.error("Transaction ID not found in MySQL database.");
+          res
+            .status(404)
+            .json({ message: "Transaction ID not found in MySQL database" });
+          return;
+        }
 
-          // Ambil data dari Oracle
-          const [TT_STORE, TT_SALES_DATE, TT_TOTAL_AMOUNT_PAID] = oracleData;
+        // Check duration since transaction date
+        db.query(checkDurationQuery, [TT_TRXNO], (err, durationResults) => {
+          if (err) {
+            console.error("Error checking duration in MySQL:", err);
+            res.status(500).json({ message: "Internal server error" });
+            return;
+          }
 
-          // Simpan path file ke dalam variabel
-          const npwpPath = `./uploads/npwp/${TT_TRXNO}_npwp.${
-            TT_FOTO_NPWP.mimetype.split("/")[1]
-          }`;
-          const trxPath = `./uploads/struk/${TT_TRXNO}_struk.${
-            TT_FOTO_TRX.mimetype.split("/")[1]
-          }`;
+          const status = durationResults[0].STATUS;
 
-          // Insert data ke MySQL
+          if (status === "REJECT") {
+            console.error(
+              `Mohon maaf permintaan faktur pajak dengan nomor struk ${TT_TRXNO} tidak bisa dibuatkan karena sudah melebihi batas ketentuan.`
+            );
+            res.status(400).json({
+              message: `Permintaan faktur pajak dengan ID ${TT_TRXNO} tidak bisa dibuatkan karena sudah melebihi batas ketentuan.`,
+            });
+            return;
+          }
+
+          // Insert data into MySQL
           const insertQuery = `
-               INSERT INTO trx_tiket (TT_TRXNO, TT_NAMA, TT_EMAIL, TT_NOHP, TT_NPWP, TT_NAMA_PT, TT_ALAMAT_PT, TT_STATUS, TT_STORE, TT_SALES_DATE, TT_TOTAL_AMOUNT_PAID,TT_INSERT_USER, TT_FOTO_NPWP, TT_FOTO_TRX) 
-               SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM trx_tiket WHERE TT_TRXNO = ?)
-            `;
-          const status = "W"; // Set status menjadi "Waiting Validate"
+            INSERT INTO trx_tiket (
+              TT_TRXNO, TT_NAMA, TT_EMAIL, TT_NOHP, TT_NPWP, TT_NAMA_PT, TT_ALAMAT_PT, TT_STATUS, TT_STORE, TT_SALES_DATE, TT_TOTAL_AMOUNT_PAID, TT_INSERT_USER, TT_FOTO_NPWP, TT_FOTO_TRX
+            ) 
+            SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? 
+            WHERE NOT EXISTS (SELECT 1 FROM trx_tiket WHERE TT_TRXNO = ?)`;
+          const TT_STATUS = "W"; // Set status to "Waiting Validate"
           const insertUser = "CUSTOMER";
+
           db.query(
             insertQuery,
             [
@@ -186,21 +184,26 @@ app.post(
               TT_NPWP,
               TT_NAMA_PT,
               TT_ALAMAT_PT,
-              status,
-              TT_STORE,
-              TT_SALES_DATE,
-              TT_TOTAL_AMOUNT_PAID,
+              TT_STATUS,
+              durationResults[0].STORE_NAME,
+              durationResults[0].SALES_DATE,
+              durationResults[0].TOTAL_AMOUNT_PAID,
               insertUser,
-              npwpPath,
-              trxPath,
+              `./uploads/npwp/${TT_TRXNO}_npwp.${
+                TT_FOTO_NPWP.mimetype.split("/")[1]
+              }`,
+              `./uploads/struk/${TT_TRXNO}_struk.${
+                TT_FOTO_TRX.mimetype.split("/")[1]
+              }`,
               TT_TRXNO,
             ],
             async (err, result) => {
               if (err) {
-                console.error("Error submitting form:", err);
-                res.status(500).json({ message: err.message });
+                console.error("Error inserting data into MySQL:", err);
+                res.status(500).json({ message: "Internal server error" });
                 return;
               }
+
               if (result.affectedRows === 0) {
                 console.error("Duplicate Transaction ID:", TT_TRXNO);
                 res.status(409).json({ message: "Duplicate Transaction ID" });
@@ -209,9 +212,19 @@ app.post(
 
               console.log("Form submitted successfully.");
               try {
-                await fs.promises.writeFile(npwpPath, TT_FOTO_NPWP.buffer);
-                await fs.promises.writeFile(trxPath, TT_FOTO_TRX.buffer);
-                // Kirim email konfirmasi
+                await fs.promises.writeFile(
+                  `./uploads/npwp/${TT_TRXNO}_npwp.${
+                    TT_FOTO_NPWP.mimetype.split("/")[1]
+                  }`,
+                  TT_FOTO_NPWP.buffer
+                );
+                await fs.promises.writeFile(
+                  `./uploads/struk/${TT_TRXNO}_struk.${
+                    TT_FOTO_TRX.mimetype.split("/")[1]
+                  }`,
+                  TT_FOTO_TRX.buffer
+                );
+                // Send confirmation email
                 await sendConfirmationEmail(
                   TT_EMAIL,
                   TT_NAMA,
@@ -227,37 +240,16 @@ app.post(
                     "Form submitted successfully. Confirmation email sent and MySQL data updated.",
                 });
               } catch (err) {
-                console.error("Error sending confirmation email:", err);
-                res.status(500).json({ message: err.message });
+                console.error("Error handling files or sending email:", err);
+                res.status(500).json({ message: "Internal server error" });
               }
             }
           );
-        } else {
-          console.error("No data found in Oracle for TRXNO:", TT_TRXNO);
-          res.status(404).json({
-            message: "No data found in Oracle for TRXNO",
-          });
-        }
-      } else {
-        // Jika ID transaksi tidak ditemukan dalam database Oracle
-        console.error("Transaction ID not found in Oracle database.");
-        res.status(404).json({
-          message: "Transaction ID not found in Oracle database",
         });
-      }
-    } catch (err) {
-      console.error("Error checking transaction ID in Oracle:", err);
-      res.status(500).json({
-        message: "Error checking transaction ID in Oracle",
       });
-    } finally {
-      if (connection) {
-        try {
-          await connection.close();
-        } catch (err) {
-          console.error(err);
-        }
-      }
+    } catch (err) {
+      console.error("Error processing form submission:", err);
+      res.status(500).json({ message: "Internal server error" });
     }
   }
 );
@@ -265,82 +257,91 @@ app.post(
 app.post("/api/checkTrx", async (req, res) => {
   const { transactionId } = req.body;
 
-  const checkTransactionQuery = `SELECT pt.id FROM POS_TRANSACTION pt WHERE pt.id = :TRXNO`;
-  const checkDurationQuery = `SELECT pt.id, s2.NAME STORE_NAME, trunc(pt.SALES_DATE) SALES_DATE, pt.TOTAL_AMOUNT_PAID, 
-    decode(to_char(pt.SALES_DATE,'yyyymm'),to_char(SYSDATE,'yyyymm'),'APPROVE', 
-    CASE WHEN trunc(pt.SALES_DATE) >=trunc(add_months(SYSDATE,-1), 'mm') AND trunc(SYSDATE) <= trunc(add_months(SYSDATE ,0),'MM')+9 THEN 'APPROVE' ELSE 'REJECT' END) STATUS
-    FROM POS_TRANSACTION pt 
-    JOIN STORE s2 ON s2.STORE_ID = pt.STORE_ID 
-    WHERE pt.id = :TRXNO`;
+  // Query to check if transaction exists in MySQL
+  const checkTransactionQuery = `SELECT TRXNO FROM transaksi WHERE TRXNO = ?;`;
+  // Query to check the duration since the transaction date in MySQL
+  const checkDurationQuery = `SELECT 
+      TRXNO,
+      STORE_NAME,
+      DATE_FORMAT(SALES_DATE, '%Y-%m-%d') AS SALES_DATE,
+      TOTAL_AMOUNT_PAID,
+      CASE 
+          WHEN DATEDIFF(NOW(), SALES_DATE) > 90 THEN 'REJECT'
+          ELSE 'APPROVE'
+      END AS STATUS
+  FROM 
+      transaksi
+  WHERE 
+      TRXNO = ?;`;
 
-  const checkMySQLQuery = `SELECT * FROM trx_tiket WHERE TT_TRXNO = ?`;
-
-  let oracleConnection;
+  // Query to check if TT_TRXNO exists in trx_tiket table in MySQL
+  const checkMySQLQuery = `SELECT * FROM trx_tiket WHERE TT_TRXNO = ?;`;
 
   try {
-    // Establishing connection to Oracle
-    oracleConnection = await oracledb.getConnection(oracleConfig);
-
-    // Check if transaction ID exists in Oracle
-    const checkTransactionResult = await oracleConnection.execute(
+    // Check if transaction ID exists in MySQL
+    db.query(
       checkTransactionQuery,
-      { TRXNO: transactionId }
-    );
-    if (checkTransactionResult.rows.length === 0) {
-      res.status(404).json({
-        exists: false,
-        message: `Transaction ID ${transactionId} does not exist in the database.`,
-      });
-      return;
-    }
-
-    // Check the duration since the transaction date in Oracle
-    const checkDurationResult = await oracleConnection.execute(
-      checkDurationQuery,
-      { TRXNO: transactionId }
-    );
-    const status = checkDurationResult.rows[0][4];
-
-    // Check if TT_TRXNO exists in MySQL
-    db.query(checkMySQLQuery, [transactionId], (err, mySqlResult) => {
-      if (err) {
-        console.error("Error checking transaction in MySQL:", err);
-        res.status(500).json({ error: "Internal server error" });
-        return;
-      }
-
-      if (mySqlResult.length > 0) {
-        // If TT_TRXNO already exists in MySQL
-        res.status(403).json({
-          message: `Transaction with ID ${transactionId} already exists in MySQL database.`,
-        });
-      } else {
-        // If TT_TRXNO doesn't exist in MySQL, proceed with other checks
-        if (status === "REJECT") {
-          res.status(400).json({
-            message: `Transaction with ID ${transactionId} exceeds the time limit.`,
-          });
-        } else {
-          res.status(200).json({
-            message: `Transaction with ID ${transactionId} is valid.`,
-          });
+      [transactionId],
+      (err, transactionResult) => {
+        if (err) {
+          console.error("Error checking transaction in MySQL:", err);
+          res.status(500).json({ error: "Internal server error" });
+          return;
         }
+
+        if (transactionResult.length === 0) {
+          res.status(404).json({
+            exists: false,
+            message: `Transaction ID ${transactionId} does not exist in the database.`,
+          });
+          return;
+        }
+
+        // Check the duration since the transaction date in MySQL
+        db.query(checkDurationQuery, [transactionId], (err, durationResult) => {
+          if (err) {
+            console.error("Error checking transaction duration in MySQL:", err);
+            res.status(500).json({ error: "Internal server error" });
+            return;
+          }
+
+          const status = durationResult[0].STATUS;
+
+          // Check if TT_TRXNO exists in trx_tiket table in MySQL
+          db.query(checkMySQLQuery, [transactionId], (err, mySqlResult) => {
+            if (err) {
+              console.error("Error checking transaction in MySQL:", err);
+              res.status(500).json({ error: "Internal server error" });
+              return;
+            }
+
+            if (mySqlResult.length > 0) {
+              // If TT_TRXNO already exists in MySQL
+              res.status(403).json({
+                message: `Transaction with ID ${transactionId} already exists in MySQL database.`,
+              });
+            } else {
+              // If TT_TRXNO doesn't exist in MySQL, proceed with other checks
+              if (status === "REJECT") {
+                res.status(400).json({
+                  message: `Transaction with ID ${transactionId} exceeds the time limit.`,
+                });
+              } else {
+                res.status(200).json({
+                  message: `Transaction with ID ${transactionId} is valid.`,
+                });
+              }
+            }
+          });
+        });
       }
-    });
+    );
   } catch (error) {
     console.error("Error checking transaction:", error);
     res.status(500).json({ error: "Internal server error" });
-  } finally {
-    // Release the Oracle connection
-    if (oracleConnection) {
-      try {
-        await oracleConnection.close();
-      } catch (error) {
-        console.error("Error closing Oracle connection:", error);
-      }
-    }
   }
 });
+
 
 // Endpoint untuk melakukan konfirmasi email berdasarkan TRXNO
 app.get("/api/confirm-email/:trxno", async (req, res) => {
@@ -383,7 +384,7 @@ app.get("/api/confirm-email/:trxno", async (req, res) => {
               console.log("Status updated to Open.");
             }
           });
-          res.redirect("https://fakturpajak.transmart.co.id/konfirmasi");
+          res.redirect("http://localhost:3001/konfirmasi");
           // res.status(200).json({ message: "Email confirmed successfully. CSV file sent." });
         } else {
           console.error("No email found for the specified TRXNO:", trxno);
@@ -411,24 +412,20 @@ async function sendConfirmationEmail(
 ) {
   try {
     const transporter = nodemailer.createTransport({
-      service: "SMTP", // e.g., 'Gmail' or 'SMTP'
+      service: "gmail",
       auth: {
-        user: "no_reply",
-        pass: "vPCnqiNnaA1",
+        type: "OAuth2",
+        user: "syahbudinpenting@gmail.com", // Ganti dengan email pengirim Anda
+        clientId: CLIENT_ID,
+        clientSecret: CLIENT_SECRET,
+        refreshToken: REFRESH_TOKEN,
+        accessToken: oauth2Client.getAccessToken(),
       },
-      host: "mail.trid-corp.net",
-      port: 587,
-      tls: {
-        rejectUnauthorized: false,
-      },
-      agent: new https.Agent({
-        rejectUnauthorized: false,
-      }),
     });
 
-    const confirmationLink = `https://backend.transmart.co.id/api/confirm-email/${TRXNO}`;
+    const confirmationLink = `http://localhost:5173/api/confirm-email/${TRXNO}`;
     const mailOptions = {
-      from: "no_reply@transretail.co.id",
+      from: "syahbudinpenting@gmail.com",
       to: email,
       subject: "Konfirmasi Email",
       html: `<p>Dear ${TT_NAMA},</p>
@@ -649,19 +646,11 @@ function writeToCSV(data, filePath) {
 async function sendEmail(TRXNO, filePath, mailTo) {
   try {
     const transporter = nodemailer.createTransport({
-      service: "SMTP", // e.g., 'Gmail' or 'SMTP'
+      service: "gmail",
       auth: {
-        user: "no_reply",
-        pass: "vPCnqiNnaA1",
+        user: "syahbudinpenting@gmail.com",
+        pass: "aefadaraf123",
       },
-      host: "mail.trid-corp.net",
-      port: 587,
-      tls: {
-        rejectUnauthorized: false,
-      },
-      agent: new https.Agent({
-        rejectUnauthorized: false,
-      }),
     });
 
     const attachmentFilePath = path.join(__dirname, "attachment", filePath); // Construct the attachment file path
@@ -686,7 +675,7 @@ async function sendEmail(TRXNO, filePath, mailTo) {
         } = customerData;
 
         const mailOptions = {
-          from: "no_reply@transretail.co.id",
+          from: "syahbudinpenting@gmail.com",
           to: mailTo,
           subject: "Request Faktur Pajak",
           html: `
@@ -1190,23 +1179,15 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
     // Kirim email dengan file terlampir ke alamat email yang sesuai (TT_EMAIL)
     const transporter = nodemailer.createTransport({
       // Konfigurasi transporter email
-      service: "SMTP", // e.g., 'Gmail' or 'SMTP'
+      service: "gmail",
       auth: {
-        user: "no_reply",
-        pass: "vPCnqiNnaA1",
+        user: "syahbudinpenting@gmail.com",
+        pass: "aefadaraf123",
       },
-      host: "mail.trid-corp.net",
-      port: 587,
-      tls: {
-        rejectUnauthorized: false,
-      },
-      agent: new https.Agent({
-        rejectUnauthorized: false,
-      }),
     });
 
     const mailOptions = {
-      from: "no_reply@transretail.co.id",
+      from: "syahbudinpenting@gmail.com",
       to: TT_EMAIL,
       subject: "File Faktur",
       html: `<p>Dear Bapak / Ibu ${TT_NAMA},</p>
@@ -1335,15 +1316,10 @@ app.post("/api/checkgroup", (req, res) => {
 
 // Konfigurasi SMTP untuk email
 const transporter = nodemailer.createTransport({
-  service: "SMTP", // e.g., 'Gmail' or 'SMTP'
+  service: "gmail",
   auth: {
-    user: "no_reply",
-    pass: "vPCnqiNnaA1",
-  },
-  host: "mail.trid-corp.net",
-  port: 587,
-  tls: {
-    rejectUnauthorized: false,
+    user: "syahbudinpenting@gmail.com",
+    pass: "aefadaraf123",
   },
 });
 
@@ -1390,7 +1366,7 @@ const j = schedule.scheduleJob("00 09 * * *", function () {
         // Jika ada hasil dari query1, kirim email
         if (results1.length > 0) {
           const mailOptions1 = {
-            from: "no_reply@transretail.co.id",
+            from: "syahbudinpenting@gmail.com",
             to: `${emailReceiver},${emailSPV}`,
             subject:
               "Reminder: Tiket Status OPEN Telah Melewati Batas Waktu 3 Hari ",
@@ -1463,7 +1439,7 @@ const j = schedule.scheduleJob("00 09 * * *", function () {
         // Jika ada hasil dari query2, kirim email
         if (results2.length > 0) {
           const mailOptions2 = {
-            from: "no_reply@transretail.co.id",
+            from: "syahbudinpenting@gmail.com",
             to: `${emailReceiver},${emailSPV}`,
             subject:
               "Reminder: Tiket Status ON PROGRESS Telah Melewati Batas Waktu 10 Hari ",
@@ -1608,6 +1584,6 @@ app.delete("/api/users/:empid", (req, res) => {
 
 //  test lallaa
 
-server.listen(port, () => {
+app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });

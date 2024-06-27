@@ -8,15 +8,15 @@ export default defineConfig({
       "@": "/src", // Adjust the path based on your actual project structure
     },
   },
-  server: {
-    middlewareMode: true,
-    // Middleware function to disable caching
-    middleware: (app) => {
-      app.use((req, res, next) => {
-        // Disable caching
-        res.setHeader('Cache-Control', 'no-store');
-        next();
-      });
-    },
-  },
+  // server: {
+  //   middlewareMode: true,
+  //   // Middleware function to disable caching
+  //   middleware: (app) => {
+  //     app.use((req, res, next) => {
+  //       // Disable caching
+  //       res.setHeader('Cache-Control', 'no-store');
+  //       next();
+  //     });
+  //   },
+  // },
 });

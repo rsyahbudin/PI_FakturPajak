@@ -151,7 +151,7 @@ function Homepage() {
         formData.append("TT_FOTO_TRX", fileInputs.TT_FOTO_TRX);
 
         const response = await axios.post(
-          "https://backend.transmart.co.id/api/submit-form",
+          "http://localhost:3001/api/submit-form",
           formData
         );
         // const response = await axios.post("https://fakturpajak.transmart.co.id:3001/api/submit-form", formData);
@@ -257,33 +257,63 @@ function Homepage() {
   const handleBlur = async () => {
     setIsLoading(true);
     try {
-      const response = await axios.post('https://backend.transmart.co.id/api/checkTrx', { transactionId: form.TT_TRXNO });
+      const response = await axios.post(
+        "http://localhost:3001/api/checkTrx",
+        { transactionId: form.TT_TRXNO }
+      );
       if (response.status === 200) {
-        setValidationMessage(language === 'id' ? 'ID Transaksi valid.' : 'Transaction ID is valid.');
-        setValidationIcon(<CheckCircleIcon className="h-5 w-5 text-green-500" />);
+        setValidationMessage(
+          language === "id" ? "ID Transaksi valid." : "Transaction ID is valid."
+        );
+        setValidationIcon(
+          <CheckCircleIcon className="h-5 w-5 text-green-500" />
+        );
       }
     } catch (error) {
       if (error.response) {
         if (error.response.status === 404) {
-          setValidationMessage(language === 'id' ? 'ID Transaksi tidak ditemukan.' : 'Transaction ID not found.');
+          setValidationMessage(
+            language === "id"
+              ? "ID Transaksi tidak ditemukan."
+              : "Transaction ID not found."
+          );
         } else if (error.response.status === 403) {
-          setValidationMessage(language === 'id' ? 'Transaksi sudah dibuatkan.' : 'Transaction has already been created.');
+          setValidationMessage(
+            language === "id"
+              ? "Transaksi sudah dibuatkan."
+              : "Transaction has already been created."
+          );
         } else if (error.response.status === 400) {
-          setValidationMessage(language === 'id' ? 'Transaksi melebihi batas waktu.' : 'Transaction exceeds the time limit.');
+          setValidationMessage(
+            language === "id"
+              ? "Transaksi melebihi batas waktu."
+              : "Transaction exceeds the time limit."
+          );
         } else {
-          setValidationMessage(language === 'id' ? 'Terjadi kesalahan saat memeriksa transaksi.' : 'Error occurred while checking transaction.');
+          setValidationMessage(
+            language === "id"
+              ? "Terjadi kesalahan saat memeriksa transaksi."
+              : "Error occurred while checking transaction."
+          );
         }
-        setValidationIcon(<ExclamationCircleIcon className="h-5 w-5 text-red-500" />);
+        setValidationIcon(
+          <ExclamationCircleIcon className="h-5 w-5 text-red-500" />
+        );
       } else {
-        console.error('Error checking transaction:', error);
-        setValidationMessage(language === 'id' ? 'Terjadi kesalahan saat memeriksa transaksi.' : 'Error occurred while checking transaction.');
-        setValidationIcon(<ExclamationCircleIcon className="h-5 w-5 text-red-500" />);
+        console.error("Error checking transaction:", error);
+        setValidationMessage(
+          language === "id"
+            ? "Terjadi kesalahan saat memeriksa transaksi."
+            : "Error occurred while checking transaction."
+        );
+        setValidationIcon(
+          <ExclamationCircleIcon className="h-5 w-5 text-red-500" />
+        );
       }
     } finally {
       setIsLoading(false);
     }
   };
-
 
   const handleStatusRequest = () => {
     navigate("/track");
