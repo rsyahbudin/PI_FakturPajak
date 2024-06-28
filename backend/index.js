@@ -73,8 +73,6 @@ db.connect((err) => {
   }
 });
 
-
-
 const uploads = multer({
   limits: {
     fileSize: 2 * 1024 * 1024, // 5MB
@@ -342,7 +340,6 @@ app.post("/api/checkTrx", async (req, res) => {
   }
 });
 
-
 // Endpoint untuk melakukan konfirmasi email berdasarkan TRXNO
 app.get("/api/confirm-email/:trxno", async (req, res) => {
   const { trxno } = req.params;
@@ -367,7 +364,7 @@ app.get("/api/confirm-email/:trxno", async (req, res) => {
           // Ambil TRXNO dari database berdasarkan alamat email yang dikonfirmasi
           const TRXNO = trxno;
           // Ambil data dari Oracle berdasarkan TRXNO dan kirim email dengan file CSV terlampir
-          await fetchDataFromOracleAndSendEmail(
+          await fetchDataFromMysqlAndSendEmail(
             TRXNO,
             email,
             npwp,
@@ -384,7 +381,7 @@ app.get("/api/confirm-email/:trxno", async (req, res) => {
               console.log("Status updated to Open.");
             }
           });
-          res.redirect("http://localhost:3001/konfirmasi");
+          res.redirect("http://localhost:5173/konfirmasi");
           // res.status(200).json({ message: "Email confirmed successfully. CSV file sent." });
         } else {
           console.error("No email found for the specified TRXNO:", trxno);
@@ -423,7 +420,7 @@ async function sendConfirmationEmail(
       },
     });
 
-    const confirmationLink = `http://localhost:5173/api/confirm-email/${TRXNO}`;
+    const confirmationLink = `http://localhost:3001/api/confirm-email/${TRXNO}`;
     const mailOptions = {
       from: "syahbudinpenting@gmail.com",
       to: email,
@@ -468,154 +465,62 @@ async function markEmailAsConfirmed(email) {
 }
 
 // Fungsi untuk mengambil data dari Oracle berdasarkan TRXNO dan langsung mengirim email dengan file CSV terlampir
-async function fetchDataFromOracleAndSendEmail(
-  TRXNO,
-  EMAIL,
-  NPWP,
-  NAMAPT,
-  ALAMATPT
-) {
+async function fetchDataFromMysqlAndSendEmail(TRXNO, EMAIL, NPWP, NAMAPT, ALAMATPT) {
   let connection;
   try {
-    // Membuat koneksi ke Oracle
-    connection = await oracledb.getConnection(oracleConfig);
+    // Using the already established connection
+    connection = db;
 
-    // Query untuk memeriksa apakah ID transaksi ada dalam database Oracle
-    const checkTransactionQuery = `SELECT * FROM POS_TRANSACTION pt WHERE pt.ID = :TRXNO`;
-    const checkTransactionResult = await connection.execute(
-      checkTransactionQuery,
-      { TRXNO }
-    );
+    // Query to check if transaction ID exists in MySQL database
+    const checkTransactionQuery = `SELECT TRXNO FROM transaksi WHERE TRXNO = ?`;
+    connection.query(checkTransactionQuery, [TRXNO], (err, checkTransactionResult) => {
+      if (err) throw err;
 
-    // Jika tidak ada hasil, berhenti dan tidak kirim email
-    if (checkTransactionResult.rows.length === 0) {
-      console.log(
-        "Transaction ID not found in Oracle database. Skipping confirmation email."
-      );
-      return;
-    }
+      // If no result, stop and do not send email
+      if (checkTransactionResult.length === 0) {
+        console.log("Transaction ID not found in MySQL database. Skipping confirmation email.");
+        return;
+      }
 
-    // Jika ada hasil, lanjutkan dengan mengambil data dan mengirim email
-    // Menjalankan query dan mengambil data
-    const query = `
-    select
-'1','FK','KD_JENIS_TRANSAKSI','FG_PENGGANTI','NOMOR_FAKTUR','MASA_PAJAK','TAHUN_PAJAK','TANGGAL_FAKTUR','NPWP','NAMA','ALAMAT_LENGKAP','JUMLAH_DPP','JUMLAH_PPN','JUMLAH_PPNBM',
-'ID_KETERANGAN_TAMBAHAN','FG_UANG_MUKA','UANG_MUKA_DPP','UANG_MUKA_PPN','UANG_MUKA_PPNBM','REFERENSI','KODE_DOKUMEN_PENDUKUNG'
-from dual
-union
-select
-'2','LT','NPWP','NAMA','JALAN','BLOK','NOMOR','RT','RW','KECAMATAN','KELURAHAN','KABUPATEN','PROPINSI',
-'KODE_POS','NOMOR_TELEPON','','','','','','' from dual
-union
-select
-'3','OF','KODE_OBJEK','NAMA','HARGA_SATUAN','JUMLAH_BARANG','HARGA_TOTAL','DISKON','DPP','PPN','TARIF_PPNBM','PPNBM',
-'','','','','','','','','' from dual
-union
-select
-NOMOR||tr NOMOR,FK,N01,N02,SERINO,to_char(to_date(tgl, 'yyyymmdd'),'mm'),to_char(to_date(tgl, 'yyyymmdd'),'yyyy'),to_char(to_date(tgl, 'yyyymmdd'),'DD/MM/YYYY'),
-NPWPNO,NPWPNAME,NPWPADDR,trim(to_char(dpp,'999999999999999999')),trim(to_char(vat,'999999999999999999')),'0','','0','0','0','0',tr,''
-from (
-Select '4' as nomor ,'FK' AS FK,'01' as N01,'0' AS N02,'' AS
-SERINO
-from dual) t
-LEFT JOIN
-(select TR AS tr,to_char(TGL,'yyyymmdd') AS tgl,round(sum(dpp),0)
-DPP,round(sum(vat),0) VAT,'0' n1,'' n2,'0' n3,'0'n4,'0'n5,'0'n6, 
-'${NPWP}' as NPWPNO, 
-'${ALAMATPT}' as NPWPADDR,
-'${NAMAPT}' as NPWPNAME from(
-Select pos_txn_id as TR,t.sales_date as
-TGL,'OF',tx.EAN13CODE,tx.SHORT_DESC,trim(to_char(round(price_unit-(price_unit)/(1+(1/(vat_rate/100))),0),'999999999999999999'))
-harga_satuan,trim(to_char(case when  is_voided='Y' then (-1)*QUANTITY else
-QUANTITY end,'9999')),
-trim(to_char(case when  is_voided='Y' then
-(-1)*round((PRICE_SUBTOTAL-DISCOUNT_AMOUNT-MEMBER_DISCOUNT_AMOUNT-DISC_BTN_AMOUNT-second_layer_discount_amount)-(PRICE_SUBTOTAL-DISCOUNT_AMOUNT-MEMBER_DISCOUNT_AMOUNT-DISC_BTN_AMOUNT-second_layer_discount_amount)/(1+(1/(vat_rate/100))),0)
-else
-round((PRICE_SUBTOTAL-DISCOUNT_AMOUNT-MEMBER_DISCOUNT_AMOUNT-DISC_BTN_AMOUNT-second_layer_discount_amount)-(PRICE_SUBTOTAL-DISCOUNT_AMOUNT-MEMBER_DISCOUNT_AMOUNT-DISC_BTN_AMOUNT-second_layer_discount_amount)/(1+(1/(vat_rate/100))),0)
-end,'999999999999999999'))  harga_total,
-trim(to_char(case when  is_voided='Y' then
-(-1)*round((DISCOUNT_AMOUNT+MEMBER_DISCOUNT_AMOUNT-DISC_BTN_AMOUNT-second_layer_discount_amount)-(DISCOUNT_AMOUNT+MEMBER_DISCOUNT_AMOUNT-DISC_BTN_AMOUNT-second_layer_discount_amount)/(1+(1/(vat_rate/100))),0)
-else
-round((DISCOUNT_AMOUNT+MEMBER_DISCOUNT_AMOUNT-DISC_BTN_AMOUNT-second_layer_discount_amount)-(DISCOUNT_AMOUNT+MEMBER_DISCOUNT_AMOUNT-DISC_BTN_AMOUNT-second_layer_discount_amount)/(1+(1/(vat_rate/100))),0)
-end ,'999999999999999999')) discount,
-trim(to_char(case when  is_voided='Y' then
-(-1)*((PRICE_SUBTOTAL-DISCOUNT_AMOUNT-MEMBER_DISCOUNT_AMOUNT-DISC_BTN_AMOUNT-second_layer_discount_amount)-
-round((PRICE_SUBTOTAL-DISCOUNT_AMOUNT-MEMBER_DISCOUNT_AMOUNT-DISC_BTN_AMOUNT-second_layer_discount_amount)/(1+(1/(vat_rate/100))),0))
-else
-(PRICE_SUBTOTAL-DISCOUNT_AMOUNT-MEMBER_DISCOUNT_AMOUNT-DISC_BTN_AMOUNT-second_layer_discount_amount)-
-round((PRICE_SUBTOTAL-DISCOUNT_AMOUNT-MEMBER_DISCOUNT_AMOUNT-DISC_BTN_AMOUNT-second_layer_discount_amount)/(1+(1/(vat_rate/100))),0)
-end ,'999999999999999999'))
- DPP,
-trim(to_char((vat_rate/100)*(case when  is_voided='Y' then
-(-1)*((PRICE_SUBTOTAL-DISCOUNT_AMOUNT-MEMBER_DISCOUNT_AMOUNT-DISC_BTN_AMOUNT-second_layer_discount_amount)-
-round((PRICE_SUBTOTAL-DISCOUNT_AMOUNT-MEMBER_DISCOUNT_AMOUNT-DISC_BTN_AMOUNT-second_layer_discount_amount)/(1+(1/(vat_rate/100))),0))
-else
-(PRICE_SUBTOTAL-DISCOUNT_AMOUNT-MEMBER_DISCOUNT_AMOUNT-DISC_BTN_AMOUNT-second_layer_discount_amount)-
-round((PRICE_SUBTOTAL-DISCOUNT_AMOUNT-MEMBER_DISCOUNT_AMOUNT-DISC_BTN_AMOUNT-second_layer_discount_amount)/(1+(1/(vat_rate/100))),0)
-end),'999999999999999999'))  VAT,'0','','0','0','0','0', 
-nvl(c.NPWP_ADDRESS, '') NPWPADDR, nvl(nvl(c.NPWP_NAME, c.company_name), '') NPWPNAME, 
-nvl( (case when c.NPWP_ID like '%00000000000000' then '' else c.NPWP_ID  end), '') NPWPNO
-from pos_tx_item tx left join product p on tx.PRODUCT_ID = p.plu_id  
-join pos_transaction t on tx.pos_txn_id = t.id
-left join crm_member c on t.customer_id = c.account_id
-where t.id = to_char(:TRXNO) and p.IS_TAX_INCLUSIVE='Y'  AND price_unit>0
-)a group by TR,to_char(TGL,'yyyymmdd'), NPWPNO,NPWPNAME,NPWPADDR)b on t.nomor like '4%'
-union all
-Select '4'||tx.pos_txn_id ||tx.id as
-key,'OF',tx.EAN13CODE,tx.SHORT_DESC,trim(to_char(round(price_unit-(price_unit)/(1+(1/(vat_rate/100))),0),'999999999999999999'))
-harga_satuan,trim(to_char(case when  is_voided='Y' then (-1)*QUANTITY else
-QUANTITY end,'9999')),
-trim(to_char(case when  is_voided='Y' then
-(-1)*round((PRICE_SUBTOTAL)-(PRICE_SUBTOTAL)/(1+(1/(vat_rate/100))),0)
-else round((PRICE_SUBTOTAL)-(PRICE_SUBTOTAL)/(1+(1/(vat_rate/100))),0)
-end,'999999999999999999'))  harga_total,
-trim(to_char(case when  is_voided='Y' then
-(-1)*round((DISCOUNT_AMOUNT+MEMBER_DISCOUNT_AMOUNT-DISC_BTN_AMOUNT-second_layer_discount_amount)-(DISCOUNT_AMOUNT+MEMBER_DISCOUNT_AMOUNT-DISC_BTN_AMOUNT-second_layer_discount_amount)/(1+(1/(vat_rate/100))),2)
-else
-round((DISCOUNT_AMOUNT+MEMBER_DISCOUNT_AMOUNT-DISC_BTN_AMOUNT-second_layer_discount_amount)-(DISCOUNT_AMOUNT+MEMBER_DISCOUNT_AMOUNT-DISC_BTN_AMOUNT-second_layer_discount_amount)/(1+(1/(vat_rate/100))),0)
-end ,'999999999999999999')) discount,trim(to_char(case when  is_voided='Y' then
-(-1)*((PRICE_SUBTOTAL-DISCOUNT_AMOUNT-MEMBER_DISCOUNT_AMOUNT-DISC_BTN_AMOUNT-second_layer_discount_amount)-
-round((PRICE_SUBTOTAL-DISCOUNT_AMOUNT-MEMBER_DISCOUNT_AMOUNT-DISC_BTN_AMOUNT-second_layer_discount_amount)/(1+(1/(vat_rate/100))),0))
-else
-(PRICE_SUBTOTAL-DISCOUNT_AMOUNT-MEMBER_DISCOUNT_AMOUNT-DISC_BTN_AMOUNT-second_layer_discount_amount)-
-round((PRICE_SUBTOTAL-DISCOUNT_AMOUNT-MEMBER_DISCOUNT_AMOUNT-DISC_BTN_AMOUNT-second_layer_discount_amount)/(1+(1/(vat_rate/100))),0)
-end ,'999999999999999999'))
- DPP,
-trim(to_char((vat_rate/100)*(case when  is_voided='Y' then
-(-1)*((PRICE_SUBTOTAL-DISCOUNT_AMOUNT-MEMBER_DISCOUNT_AMOUNT-DISC_BTN_AMOUNT-second_layer_discount_amount)-
-round((PRICE_SUBTOTAL-DISCOUNT_AMOUNT-MEMBER_DISCOUNT_AMOUNT-DISC_BTN_AMOUNT-second_layer_discount_amount)/(1+(1/(vat_rate/100))),0))
-else
-(PRICE_SUBTOTAL-DISCOUNT_AMOUNT-MEMBER_DISCOUNT_AMOUNT-DISC_BTN_AMOUNT-second_layer_discount_amount)-
-round((PRICE_SUBTOTAL-DISCOUNT_AMOUNT-MEMBER_DISCOUNT_AMOUNT-DISC_BTN_AMOUNT-second_layer_discount_amount)/(1+(1/(vat_rate/100))),0)
-end),'999999999999999999'))  VAT,'0','0','','','','','','','','',''
-from pos_tx_item tx left join product p on tx.PRODUCT_ID = p.plu_id  
-join pos_transaction t on tx.pos_txn_id = t.id
-where t.id = to_char(:TRXNO) and p.IS_TAX_INCLUSIVE='Y' AND price_unit>0
-order by 1
-  `;
+      // Query to fetch data
+      const query = `
+        SELECT
+          TRXNO,
+          SALES_DATE,
+          STORE_NAME,
+          TOTAL_AMOUNT_PAID,
+          PRODUCT_NAME,
+          QUANTITY,
+          UNIT_PRICE,
+          TAX_RATE,
+          (QUANTITY * UNIT_PRICE) AS TOTAL_PRICE,
+          ((QUANTITY * UNIT_PRICE) * TAX_RATE / 100) AS TAX_AMOUNT,
+          CASE
+            WHEN ((QUANTITY * UNIT_PRICE) * TAX_RATE / 100) > 10000 THEN 'Y'
+            ELSE 'N'
+          END AS TAX_INCLUSIVE,
+          ? AS NPWP,
+          ? AS NAMA,
+          ? AS ALAMAT_LENGKAP
+        FROM transaksi
+        WHERE TRXNO = ?;
+      `;
 
-    const binds = { TRXNO };
-    const result = await connection.execute(query, binds);
+      connection.query(query, [NPWP, NAMAPT, ALAMATPT, TRXNO], async (err, result) => {
+        if (err) throw err;
 
-    // Memotong elemen pertama dari array data
-    const trimmedData = result.rows.map((row) => row.slice(1));
+        // Write data to CSV file
+        const filePath = `${TRXNO}.csv`;
+        await writeToCSV(result, filePath);
 
-    // Menulis data ke file CSV
-    const filePath = `${TRXNO}.csv`;
-    await writeToCSV(trimmedData, filePath);
-
-    // Kirim email dengan file CSV terlampir
-    await sendEmail(TRXNO, filePath, EMAIL);
+        // Send email with CSV file attached
+        await sendEmail(TRXNO, filePath, EMAIL);
+      });
+    });
   } catch (err) {
     throw err;
   } finally {
-    if (connection) {
-      try {
-        await connection.close();
-      } catch (err) {
-        console.error(err);
-      }
-    }
+    // We don't need to close the connection here since it's a shared connection
   }
 }
 
