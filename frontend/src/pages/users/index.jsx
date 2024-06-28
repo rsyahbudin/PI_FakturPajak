@@ -40,7 +40,7 @@ const Users = () => {
   const fetchUsers = async () => {
     try {
       const response = await axios.get(
-        "https://backend.transmart.co.id/api/users"
+        "http://localhost:3001/api/users"
       );
       setUsers(response.data);
     } catch (error) {
@@ -65,7 +65,7 @@ const Users = () => {
   const handleSaveEdit = async () => {
     try {
       await axios.put(
-        `https://backend.transmart.co.id/api/users/${selectedUser.mgm_user_id}`,
+        `http://localhost:3001/api/users/${selectedUser.mgm_user_id}`,
         { role: selectedUser.role }
       );
       fetchUsers();
@@ -77,7 +77,7 @@ const Users = () => {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`https://backend.transmart.co.id/api/users/${id}`);
+      await axios.delete(`http://localhost:3001/api/users/${id}`);
       fetchUsers();
     } catch (error) {
       console.error("There was an error deleting the user!", error);
@@ -86,7 +86,7 @@ const Users = () => {
 
   const handleAddUser = async () => {
     try {
-      await axios.post("https://backend.transmart.co.id/api/users", newUser);
+      await axios.post("http://localhost:3001/api/users", newUser);
       fetchUsers();
       setNewUser({ role: "", empid: "" });
       setOpenAddModal(false);

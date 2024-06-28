@@ -45,7 +45,7 @@ function TransactionTable() {
     setIsLoading(true);
     try {
       const response = await axios.get(
-        "https://backend.transmart.co.id/api/trx_tiket"
+        "http://localhost:3001/api/trx_tiket"
         // "https://fakturpajak.transmart.co.id:3001/api/trx_tiket"
       );
       setTransactions(response.data);
@@ -71,7 +71,7 @@ function TransactionTable() {
 
       // Panggil endpoint untuk mengubah status dan catatan transaksi
       const response = await axios.post(
-        "https://backend.transmart.co.id/api/update-status-and-remarks",
+        "http://localhost:3001/api/update-status-and-remarks",
         // "https://fakturpajak.transmart.co.id:3001/api/update-status-and-remarks",
         {
           trxno: TT_TRXNO,
@@ -89,7 +89,7 @@ function TransactionTable() {
         formData.append("file", file);
 
         const uploadResponse = await axios.post(
-          "https://backend.transmart.co.id/api/upload",
+          "http://localhost:3001/api/upload",
           // "https://fakturpajak.transmart.co.id:3001/api/upload",
           formData,
           {

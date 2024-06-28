@@ -14,7 +14,7 @@ const LoginCard = () => {
       try {
          // Mengirimkan permintaan ke endpoint login
          const response = await fetch(
-            "https://backend.transmart.co.id/fakturpajak/login",
+            "http://localhost:3001/fakturpajak/login",
             {
                method: "POST",
                headers: {
@@ -32,7 +32,7 @@ const LoginCard = () => {
             if (data.length > 0) {
                // Mengirimkan permintaan ke endpoint checkgroup
                const groupResponse = await fetch(
-                  "https://backend.transmart.co.id/api/checkgroup",
+                  "http://localhost:3001/api/checkgroup",
                   {
                      method: "POST",
                      headers: {

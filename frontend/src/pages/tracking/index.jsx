@@ -16,8 +16,8 @@ const TrackingPage = () => {
    setIsLoading(true);
     try {
       const response = await fetch(
-        // `https://backend.transmart.co.id/api/track-status/${trxno}`
-        `https://backend.transmart.co.id/api/track-status/${trxno}`
+        // `http://localhost:3001/api/track-status/${trxno}`
+        `http://localhost:3001/api/track-status/${trxno}`
         // `https://10.21.9.234/api/track-status/${trxno}`
       );
       if (!response.ok) {
@@ -44,7 +44,7 @@ const TrackingPage = () => {
 
     try {
       const customerResponse = await fetch(
-        `https://backend.transmart.co.id/api/customer-detail/${trxno}`
+        `http://localhost:3001/api/customer-detail/${trxno}`
       );
       if (!customerResponse.ok) {
         throw new Error("Gagal mengambil detail pelanggan");
@@ -58,7 +58,7 @@ const TrackingPage = () => {
 
     try {
       const posResponse = await fetch(
-        `https://backend.transmart.co.id/api/pos-detail/${trxno}`
+        `http://localhost:3001/api/pos-detail/${trxno}`
       );
       if (!posResponse.ok) {
         throw new Error("Gagal mengambil detail POS");

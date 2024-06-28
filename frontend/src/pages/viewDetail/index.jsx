@@ -16,7 +16,7 @@ const ViewDetails = () => {
       const fetchTransaction = async () => {
          try {
             const transactionResponse = await axios.get(
-               `https://backend.transmart.co.id/api/trx_tiket/${trxId}`
+               `http://localhost:3001/api/trx_tiket/${trxId}`
             );
             setTransaction(transactionResponse.data);
          } catch (error) {
@@ -40,7 +40,7 @@ const ViewDetails = () => {
       } else {
          try {
             const photoResponse = await axios.get(
-               `https://backend.transmart.co.id/api/trx_tiket/${trxId}/${photoField}`,
+               `http://localhost:3001/api/trx_tiket/${trxId}/${photoField}`,
                {
                   responseType: "blob",
                }
@@ -64,7 +64,7 @@ const ViewDetails = () => {
       } else {
          try {
             const invoiceResponse = await axios.get(
-               `https://backend.transmart.co.id/api/trx_tiket/${trxId}/file_faktur`,
+               `http://localhost:3001/api/trx_tiket/${trxId}/file_faktur`,
                {
                   responseType: "blob",
                }
