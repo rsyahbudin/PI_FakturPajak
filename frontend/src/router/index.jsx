@@ -9,6 +9,7 @@ import TrackingPage from "../pages/tracking";
 import ViewDetail from "../pages/viewDetail";
 import Report from "../pages/report";
 import Users from "../pages/users";
+import Register from "../pages/register";
 
 
 // Fungsi untuk memeriksa apakah pengguna sudah admin
@@ -20,6 +21,7 @@ export default function Routes() {
    const element = useRoutes([
       { path: "/", element: <Homepage /> },
       { path: "/admin", element: <Admin /> },
+      { path: "/register", element: <Register /> },
       { path: "/dashboard", element: isAuthenticated() ? <Dashboard /> : <Navigate to="/admin" /> },
       { path: "/timeline", element: isAuthenticated() ? <Timeline /> : <Navigate to="/admin" /> },
       { path: "/konfirmasi", element: <Konfirmasi /> },

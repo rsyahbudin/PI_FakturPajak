@@ -9,68 +9,62 @@ const LoginCard = () => {
    const [password, setPassword] = useState("");
    const [loading, setLoading] = useState(false);
 
-   const validateLogin = async () => {
-      setLoading(true);
-      try {
-         // Mengirimkan permintaan ke endpoint login
-         const response = await fetch(
-            "http://localhost:3001/fakturpajak/login",
-            {
-               method: "POST",
-               headers: {
-                  "Content-Type": "application/json",
-               },
-               body: JSON.stringify({ username, password }),
-            }
-         );
+  const validateLogin = async () => {
+  setLoading(true);
+  try {
+    // Sending login request
+    const response = await fetch("http://localhost:3001/api/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ username, password }),
+    });
 
-         if (response.ok) {
-            const data = await response.json();
-            console.log("Response data:", data); // Debugging line
-            localStorage.setItem("infoUser", data[0].employeeID);
-            // Assuming the server returns a success field to indicate a successful login
-            if (data.length > 0) {
-               // Mengirimkan permintaan ke endpoint checkgroup
-               const groupResponse = await fetch(
-                  "http://localhost:3001/api/checkgroup",
-                  {
-                     method: "POST",
-                     headers: {
-                        "Content-Type": "application/json",
-                     },
-                     body: JSON.stringify({ username }),
-                  }
-               );
+    if (response.ok) {
+      const data = await response.json();
+      console.log("Response data:", data); // Debugging line
+      localStorage.setItem("infoUser", data[0].employeeID);
+      
+      if (data.length > 0) {
+        // Sending check group request
+        const groupResponse = await fetch("http://localhost:3001/api/checkgroup", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ username }),
+        });
 
-               if (groupResponse.ok) {
-                  // Jika berhasil mendapatkan grup, ambil groupName dari respons
-                  const { groupName } = await groupResponse.json();
-                  localStorage.setItem("userGroup", groupName);
-                  // Tampilkan pesan sesuai dengan groupName
-                  if (groupName === 1) {
-                     alert(`Welcome ${username} as a Staff`);
-                  } else if (groupName === 2) {
-                     alert(`Welcome ${username} as a Manager`);
-                  }  else if (groupName === 3) {
-                     alert(`Welcome ${username} as a Super Admin`)
-                  }
-                  // Arahkan pengguna ke dashboard setelah pesan ditampilkan
-                  navigate("/dashboard");
-               } else {
-                  alert("EMPID belum ada role!");
-               }
-            } else {
-               // Handle HTTP errors
-               alert("Invalid credentials!");
-            }
-         }
-      } catch (error) {
-         console.error("Error during login:", error);
-         alert("Username atau Password salah.");
-      } finally {
-         setLoading(false);
+        if (groupResponse.ok) {
+          const { groupName } = await groupResponse.json();
+          localStorage.setItem("userGroup", groupName);
+          
+          if (groupName === 1) {
+            alert(`Welcome ${username} as a Staff`);
+          } else if (groupName === 2) {
+            alert(`Welcome ${username} as a Manager`);
+          } else if (groupName === 3) {
+            alert(`Welcome ${username} as a Super Admin`);
+          }
+          navigate("/dashboard");
+        } else {
+          alert("EMPID belum ada role!");
+        }
+      } else {
+        alert("Invalid credentials!");
       }
-   };
+    } else {
+      alert("Invalid credentials!");
+    }
+  } catch (error) {
+    console.error("Error during login:", error);
+    alert("Username atau Password salah.");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
    return (
       <>

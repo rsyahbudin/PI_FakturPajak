@@ -16,6 +16,7 @@ const schedule = require("node-schedule");
 const authenticateToken = require("./middleware/auth.js");
 require("dotenv").config();
 const { google } = require("googleapis");
+const bcrypt = require("bcryptjs");
 
 const app = express();
 const port = 3001;
@@ -1132,31 +1133,63 @@ async function getTransactionInfo(TT_TRXNO) {
   });
 }
 
-app.post("api/login", (req, res) => {
-  let data = new FormData();
-  data.append("EMPID", "xxxxxxxxxxx");
-  data.append("PASS", "12345678");
-  data.append("DATA", "AUTH");
-  data.append("KEY", "FNylcvX7HKbOq7nW");
+app.post("/api/login", (req, res) => {
+  const { empid, password } = req.body;
 
-  let config = {
-    method: "post",
-    maxBodyLength: Infinity,
-    url: "http://hcm.transretail.co.id/services/paos.php",
-    headers: {
-      ...data.getHeaders(),
-    },
-    data: data,
-  };
+  if (!empid || !password) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
 
-  axios
-    .request(config)
-    .then((response) => {
-      console.log(JSON.stringify(response.data));
-    })
-    .catch((error) => {
-      console.log(error);
-    });
+  db.query(
+    "SELECT * FROM users WHERE empid = ?",
+    [empid],
+    async (err, results) => {
+      if (err) {
+        return res.status(500).json({ message: "Error retrieving user" });
+      }
+      if (results.length === 0) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      const user = results[0];
+      const isMatch = await bcrypt.compare(password, user.password);
+
+      if (!isMatch) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      res
+        .status(200)
+        .json({
+          message: "Login successful",
+          user: { empid: user.empid, role: user.role, email: user.email },
+        });
+    }
+  );
+});
+
+app.post("/api/register", async (req, res) => {
+  const { empid, password, role, email } = req.body;
+
+  if (!empid || !password || !role || !email) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
+
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    db.query(
+      "INSERT INTO users (empid, password, role, email) VALUES (?, ?, ?, ?)",
+      [empid, hashedPassword, role, email],
+      (err, results) => {
+        if (err) {
+          return res.status(500).json({ message: "Error registering user" });
+        }
+        res.status(201).json({ message: "User registered successfully" });
+      }
+    );
+  } catch (error) {
+    res.status(500).json({ message: "Error hashing password" });
+  }
 });
 
 app.get("/api/status", (req, res) => {
