@@ -708,25 +708,34 @@ app.get("/api/customer-detail/:trxno", async (req, res) => {
   }
 });
 
-app.get("/api/pos-detail/:trxno", async (req, res) => {
+app.get("/api/pos-detail/:trxno", (req, res) => {
   const { trxno } = req.params;
-  let connection;
-  try {
-    connection = await oracledb.getConnection(oracleConfig);
 
-    const query = `
-      SELECT pt.id, TO_CHAR(pt.SALES_DATE,'DD MON YYYY'), s2.NAME , TOTAL_AMOUNT_PAID 
-      FROM POS_TRANSACTION pt 
-      LEFT JOIN STORE s2 ON s2.STORE_ID=pt.STORE_ID 
-      WHERE pt.id=:TRXNO`;
-    const result = await connection.execute(query, { TRXNO: trxno }); // ubah trxno menjadi TRXNO sesuai dengan placeholder dalam query
+  const query = `
+    SELECT 
+      TRXNO,
+      DATE_FORMAT(SALES_DATE, '%d %b %Y') AS SALES_DATE,
+      STORE_NAME,
+      TOTAL_AMOUNT_PAID
+    FROM 
+      transaksi
+    WHERE 
+      TRXNO = ?;
+  `;
 
-    if (result.rows.length > 0) {
+  db.query(query, [trxno], (err, result) => {
+    if (err) {
+      console.error("Error retrieving POS detail:", err);
+      res.status(500).json({ message: err.message });
+      return;
+    }
+
+    if (result.length > 0) {
       const posDetail = {
-        id: result.rows[0][0],
-        sales_date: result.rows[0][1],
-        store_name: result.rows[0][2],
-        total_amount_paid: result.rows[0][3],
+        trxno: result[0].TRXNO,
+        sales_date: result[0].SALES_DATE,
+        store_name: result[0].STORE_NAME,
+        total_amount_paid: result[0].TOTAL_AMOUNT_PAID,
       };
       res.status(200).json(posDetail);
     } else {
@@ -735,18 +744,7 @@ app.get("/api/pos-detail/:trxno", async (req, res) => {
         message: "No POS detail found for the specified TRXNO",
       });
     }
-  } catch (err) {
-    console.error("Error retrieving POS detail:", err);
-    res.status(500).json({ message: err.message });
-  } finally {
-    if (connection) {
-      try {
-        await connection.close();
-      } catch (err) {
-        console.error("Error closing connection:", err);
-      }
-    }
-  }
+  });
 });
 
 // Endpoint untuk mendapatkan semua transaksi
