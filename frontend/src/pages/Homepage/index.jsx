@@ -257,10 +257,9 @@ function Homepage() {
   const handleBlur = async () => {
     setIsLoading(true);
     try {
-      const response = await axios.post(
-        "http://localhost:3001/api/checkTrx",
-        { transactionId: form.TT_TRXNO }
-      );
+      const response = await axios.post("http://localhost:3001/api/checkTrx", {
+        transactionId: form.TT_TRXNO,
+      });
       if (response.status === 200) {
         setValidationMessage(
           language === "id" ? "ID Transaksi valid." : "Transaction ID is valid."
@@ -610,12 +609,13 @@ function Homepage() {
           <div className="p-4 rounded-md text-center">
             <p>
               {language === "id"
-                ? "Note: Layanan permintaan faktur pajak hanya berlaku untuk pembelian yang dilakukan dalam bulan ini dan harus ditunggu "
-                : "Note: The tax invoice request service is only applicable for purchases made in the current month and must be awaited "}
+                ? "Note: Layanan permintaan faktur pajak hanya berlaku untuk pembelian yang dilakukan "
+                : "Note: The tax invoice request service is only applicable for purchases made within "}
+
               <span className="font-bold">
                 {language === "id"
-                  ? "paling lambat tanggal 10 di bulan berikutnya."
-                  : "by the 10th of the following month."}
+                  ? "kurang dari 40 hari."
+                  : "less than 40 days."}
               </span>
             </p>
           </div>

@@ -118,7 +118,7 @@ app.post(
         DATE_FORMAT(SALES_DATE, '%Y-%m-%d') AS SALES_DATE,
         TOTAL_AMOUNT_PAID,
         CASE 
-          WHEN DATEDIFF(NOW(), SALES_DATE) > 90 THEN 'REJECT'
+          WHEN DATEDIFF(NOW(), SALES_DATE) > 40 THEN 'REJECT'
           ELSE 'APPROVE'
         END AS STATUS
       FROM 
