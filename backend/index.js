@@ -1133,6 +1133,7 @@ async function getTransactionInfo(TT_TRXNO) {
   });
 }
 
+// Login API
 app.post("/api/login", (req, res) => {
   const { empid, password } = req.body;
 
@@ -1140,46 +1141,48 @@ app.post("/api/login", (req, res) => {
     return res.status(400).json({ message: "All fields are required" });
   }
 
-  db.query(
-    "SELECT * FROM users WHERE empid = ?",
-    [empid],
-    async (err, results) => {
-      if (err) {
-        return res.status(500).json({ message: "Error retrieving user" });
-      }
-      if (results.length === 0) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
+  const userQuery =
+    "SELECT mgm_user_pw FROM mst_group_member WHERE mgm_user_id = ?";
 
-      const user = results[0];
-      const isMatch = await bcrypt.compare(password, user.password);
-
-      if (!isMatch) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-
-      res
-        .status(200)
-        .json({
-          message: "Login successful",
-          user: { empid: user.empid, role: user.role, email: user.email },
-        });
+  db.query(userQuery, [empid], async (err, results) => {
+    if (err) {
+      res.status(500).json({ message: "Database query error" });
+      return;
     }
-  );
+
+    if (results.length > 0) {
+      const hashedPassword = results[0].mgm_user_pw;
+
+      const isPasswordValid = await bcrypt.compare(password, hashedPassword);
+      if (isPasswordValid) {
+        res.status(200).json({ employeeID: empid });
+      } else {
+        res.status(401).json({ message: "Invalid credentials" });
+      }
+    } else {
+      res.status(401).json({ message: "Invalid credentials" });
+    }
+  });
 });
 
-app.post("/api/register", async (req, res) => {
-  const { empid, password, role, email } = req.body;
 
-  if (!empid || !password || !role || !email) {
+
+
+// Register API
+app.post("/api/register", async (req, res) => {
+  const { empid, password, email } = req.body;
+
+  if (!empid || !password || !email) {
     return res.status(400).json({ message: "All fields are required" });
   }
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
+    const defaultRole = 1; // Role '1' for staff
+
     db.query(
-      "INSERT INTO users (empid, password, role, email) VALUES (?, ?, ?, ?)",
-      [empid, hashedPassword, role, email],
+      "INSERT INTO mst_group_member (mgm_user_id, mgm_user_pw, mgm_user_email, mgm_mg_id, created_at) VALUES (?, ?, ?, ?, NOW())",
+      [empid, hashedPassword, email, defaultRole],
       (err, results) => {
         if (err) {
           return res.status(500).json({ message: "Error registering user" });
@@ -1191,6 +1194,7 @@ app.post("/api/register", async (req, res) => {
     res.status(500).json({ message: "Error hashing password" });
   }
 });
+
 
 app.get("/api/status", (req, res) => {
   const queries = [
