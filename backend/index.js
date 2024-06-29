@@ -1138,7 +1138,7 @@ app.post("/api/login", (req, res) => {
   const { empid, password } = req.body;
 
   if (!empid || !password) {
-    return res.status(400).json({ message: "All fields are required" });
+    return res.status(400).json({ message: "EMPID and password are required" });
   }
 
   const userQuery =
@@ -1155,7 +1155,13 @@ app.post("/api/login", (req, res) => {
 
       const isPasswordValid = await bcrypt.compare(password, hashedPassword);
       if (isPasswordValid) {
-        res.status(200).json({ employeeID: empid });
+        res
+          .status(200)
+          .json({
+            employeeID: empid,
+            message: `${empid} successfully logged in`,
+          });
+          console.log(`${empid} successfully logged in`);
       } else {
         res.status(401).json({ message: "Invalid credentials" });
       }
@@ -1168,7 +1174,8 @@ app.post("/api/login", (req, res) => {
 
 
 
-// Register API
+
+
 app.post("/api/register", async (req, res) => {
   const { empid, password, email } = req.body;
 
@@ -1177,23 +1184,41 @@ app.post("/api/register", async (req, res) => {
   }
 
   try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const defaultRole = 1; // Role '1' for staff
-
-    db.query(
-      "INSERT INTO mst_group_member (mgm_user_id, mgm_user_pw, mgm_user_email, mgm_mg_id, created_at) VALUES (?, ?, ?, ?, NOW())",
-      [empid, hashedPassword, email, defaultRole],
-      (err, results) => {
-        if (err) {
-          return res.status(500).json({ message: "Error registering user" });
-        }
-        res.status(201).json({ message: "User registered successfully" });
+    // Check if empid already exists in mst_group_member table
+    const checkQuery = `
+      SELECT mgm_user_id FROM mst_group_member WHERE mgm_user_id = ?
+    `;
+    db.query(checkQuery, [empid], async (err, results) => {
+      if (err) {
+        return res.status(500).json({ message: "Database error" });
       }
-    );
+      if (results.length > 0) {
+        return res.status(400).json({ message: "EMPID already exists" });
+      }
+
+      // Insert into mst_group_member table
+      const insertQuery = `
+        INSERT INTO mst_group_member (mgm_mg_id, mgm_user_id, mgm_user_pw, mgm_user_email, created_at)
+        VALUES (?, ?, ?, ?, NOW())
+      `;
+      const hashedPassword = await bcrypt.hash(password, 10);
+      db.query(
+        insertQuery,
+        [1, empid, hashedPassword, email],
+        (err, results) => {
+          if (err) {
+            return res.status(500).json({ message: "Error registering user" });
+          }
+          res.status(201).json({ message: "User registered successfully" });
+          console.log(`${empid} successfully registered`);
+        }
+      );
+    });
   } catch (error) {
-    res.status(500).json({ message: "Error hashing password" });
+    res.status(500).json({ message: "Error registering user" });
   }
 });
+
 
 
 app.get("/api/status", (req, res) => {

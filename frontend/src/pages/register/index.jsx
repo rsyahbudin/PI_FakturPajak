@@ -9,8 +9,34 @@ const Register = () => {
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errorEmpid, setErrorEmpid] = useState("");
+  const [errorPassword, setErrorPassword] = useState("");
+  const [errorEmail, setErrorEmail] = useState("");
+  const [error, setError] = useState("");
 
   const handleRegister = async () => {
+    // Clear previous errors
+    setErrorEmpid("");
+    setErrorPassword("");
+    setErrorEmail("");
+    setError("");
+
+    // Check if any field is empty
+    if (!empid) {
+      setErrorEmpid("EMPID is required");
+      return;
+    }
+
+    if (!password) {
+      setErrorPassword("Password is required");
+      return;
+    }
+
+    if (!email) {
+      setErrorEmail("Email is required");
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await fetch("http://localhost:3001/api/register", {
@@ -23,12 +49,12 @@ const Register = () => {
 
       if (response.ok) {
         const data = await response.json();
-        console.log("Response data:", data); // Debugging line
         alert("User registered successfully");
-        navigate("/admin");
+        // Redirect to login page or any other page
+        navigate("/admin")
       } else {
         const data = await response.json();
-        alert(data.message);
+        alert(data.message); // Handle error message from backend
       }
     } catch (error) {
       console.error("Error during registration:", error);
@@ -73,8 +99,15 @@ const Register = () => {
               type="text"
               placeholder="EMPID"
               value={empid}
-              onChange={(e) => setEmpid(e.target.value)}
+              onChange={(e) => {
+                setEmpid(e.target.value);
+                setErrorEmpid(""); // Clear error on change
+              }}
+              required
             />
+            {errorEmpid && (
+              <p className="text-red-500 text-sm mb-2">{errorEmpid}</p>
+            )}
           </div>
           <div className="mb-6">
             <label
@@ -89,8 +122,15 @@ const Register = () => {
               type="password"
               placeholder="PASS"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setErrorPassword(""); // Clear error on change
+              }}
+              required
             />
+            {errorPassword && (
+              <p className="text-red-500 text-sm mb-2">{errorPassword}</p>
+            )}
           </div>
           <div className="mb-6">
             <label
@@ -105,9 +145,17 @@ const Register = () => {
               type="email"
               placeholder="Email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setErrorEmail(""); // Clear error on change
+              }}
+              required
             />
+            {errorEmail && (
+              <p className="text-red-500 text-sm mb-2">{errorEmail}</p>
+            )}
           </div>
+          {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
           <div className="flex items-center justify-between">
             <button
               className="bg-white hover:bg-gray-400 text-primary font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"

@@ -9,6 +9,12 @@ const LoginCard = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter") {
+      validateLogin();
+    }
+  };
+
   const validateLogin = async () => {
     setLoading(true);
     try {
@@ -103,6 +109,7 @@ const LoginCard = () => {
               placeholder="EMPID"
               value={empid}
               onChange={(e) => setEmpid(e.target.value)}
+              onKeyPress={handleKeyPress} // Handle Enter key press
             />
           </div>
           <div className="mb-6">
@@ -119,6 +126,7 @@ const LoginCard = () => {
               placeholder="PASS"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onKeyPress={handleKeyPress} // Handle Enter key press
             />
           </div>
           <div className="flex items-center justify-between">
