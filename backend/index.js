@@ -756,7 +756,7 @@ app.get("/api/trx_tiket", (req, res) => {
     Expires: "Sat, 01 Jan 1970 00:00:00 GMT",
   });
   const sql = `
-   SELECT 
+    SELECT 
         tt.*, 
         ms.*, 
         DATE_FORMAT(tt.TT_INSERT_DATE, '%Y-%m-%d') AS TT_INSERT_DATE_FORMATTED,
@@ -765,9 +765,9 @@ app.get("/api/trx_tiket", (req, res) => {
             ELSE DATEDIFF(SYSDATE(), tt.TT_UPDATE_DATE) 
         END AS duration
     FROM 
-        fakturpajak.trx_tiket tt 
+        trx_tiket tt 
     JOIN 
-        fakturpajak.mst_status ms ON ms.ms_code = tt.TT_STATUS;
+        mst_status ms ON ms.ms_code = tt.TT_STATUS;
    `;
   //    const sql = `
   //     SELECT *,

@@ -15,7 +15,7 @@ export function StatusCard({ title, status }) {
       const fetchData = async () => {
          try {
             const response = await axios.get(
-               "https://backend.transmart.co.id/api/status",
+               "http://localhost:3001/api/status",
                {
                   headers: {
                      "Cache-Control": "no-cache",
