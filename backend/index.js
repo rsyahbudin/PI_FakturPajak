@@ -33,6 +33,7 @@ app.use(
   cors({
     origin: "https://pi-faktur-pajak.vercel.app",
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
 );
