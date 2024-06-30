@@ -29,7 +29,13 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json({ limit: "1024mb" }));
-app.use(cors());
+app.use(
+  cors({
+    origin: "https://pi-faktur-pajak.vercel.app",
+    methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+    credentials: true,
+  })
+);
 app.use(express.urlencoded({ limit: "1024mb", extended: true }));
 
 const CLIENT_ID = process.env.CLIENT_ID;

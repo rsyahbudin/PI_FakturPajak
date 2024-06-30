@@ -39,7 +39,7 @@ const Register = () => {
 
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:3001/api/register", {
+      const response = await fetch("https://pi-faktur-pajak.vercel.app/api/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
