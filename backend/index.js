@@ -64,8 +64,8 @@ oauth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
 const db = mysql.createConnection({
   host: "localhost",
   port: 3306,
-  user: "root",
-  password: "",
+  user: "rsyahbudin",
+  password: "Aefadaraf123.",
   database: "faktur-pajak",
 });
 
