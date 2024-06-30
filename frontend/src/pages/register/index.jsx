@@ -40,7 +40,7 @@ const Register = () => {
     setLoading(true);
     try {
       const response = await fetch(
-        "https://pi-faktur-pajak-qylf.vercel.app//api/register",
+        "https://pi-faktur-pajak-qylf.vercel.app/api/register",
         {
           method: "POST",
           headers: {
