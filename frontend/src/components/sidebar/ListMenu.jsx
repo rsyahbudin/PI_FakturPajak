@@ -89,16 +89,16 @@ const list = [
     icon: "timeline",
     link: "/timeline",
   },
-  {
-    title: "Report",
-    icon: "report",
-    link: "/report",
-  },
-  {
-    title: "Users",
-    icon: "users",
-    link: "/users",
-  },
+  // {
+  //   title: "Report",
+  //   icon: "report",
+  //   link: "/report",
+  // },
+  // {
+  //   title: "Users",
+  //   icon: "users",
+  //   link: "/users",
+  // },
   {
     title: "Sign Out",
     icon: "logout",
