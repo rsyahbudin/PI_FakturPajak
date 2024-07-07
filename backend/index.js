@@ -554,8 +554,12 @@ async function sendEmail(TRXNO, filePath, mailTo) {
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: "syahbudinpenting@gmail.com",
-        pass: "aefadaraf123",
+        type: "OAuth2",
+        user: "syahbudinpenting@gmail.com", // Ganti dengan email pengirim Anda
+        clientId: CLIENT_ID,
+        clientSecret: CLIENT_SECRET,
+        refreshToken: REFRESH_TOKEN,
+        accessToken: oauth2Client.getAccessToken(),
       },
     });
 
@@ -1085,8 +1089,12 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
       // Konfigurasi transporter email
       service: "gmail",
       auth: {
-        user: "syahbudinpenting@gmail.com",
-        pass: "aefadaraf123",
+        type: "OAuth2",
+        user: "syahbudinpenting@gmail.com", // Ganti dengan email pengirim Anda
+        clientId: CLIENT_ID,
+        clientSecret: CLIENT_SECRET,
+        refreshToken: REFRESH_TOKEN,
+        accessToken: oauth2Client.getAccessToken(),
       },
     });
 
@@ -1283,8 +1291,12 @@ app.post("/api/checkgroup", (req, res) => {
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: "syahbudinpenting@gmail.com",
-    pass: "aefadaraf123",
+    type: "OAuth2",
+    user: "syahbudinpenting@gmail.com", // Ganti dengan email pengirim Anda
+    clientId: CLIENT_ID,
+    clientSecret: CLIENT_SECRET,
+    refreshToken: REFRESH_TOKEN,
+    accessToken: oauth2Client.getAccessToken(),
   },
 });
 
@@ -1365,7 +1377,7 @@ const j = schedule.scheduleJob("00 09 * * *", function () {
                    )
                    .join("")}
                </table>
-               <p>Untuk lebih detailnya silahkan mengakses laman https://fakturpajak.transmart.co.id/admin untuk mengupdate statusnya.</p>
+               <p>Untuk lebih detailnya silahkan mengakses laman http://localhost:5173/admin untuk mengupdate statusnya.</p>
                <p>Salam</p>
              `,
           };
@@ -1438,7 +1450,7 @@ const j = schedule.scheduleJob("00 09 * * *", function () {
                    )
                    .join("")}
                </table>
-               <p>Untuk lebih detailnya silahkan mengakses laman https://fakturpajak.transmart.co.id/admin untuk mengupdate statusnya.</p>
+               <p>Untuk lebih detailnya silahkan mengakses laman http://localhost:5173/admin untuk mengupdate statusnya.</p>
                <p>Salam</p>
              `,
           };

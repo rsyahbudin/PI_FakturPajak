@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import logo from "../../assets/logo.png";
 import { useNavigate } from "react-router-dom";
 import CircularProgress from "@mui/material/CircularProgress";
+import { ExclamationCircleIcon } from '@heroicons/react/24/outline';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -86,73 +87,94 @@ const Register = () => {
               Tax Register
             </h2>
           </div>
-          <div className="mb-4">
+          <div className="mb-4 relative">
             <label
               className="block text-white text-sm font-bold mb-2"
               htmlFor="EMPID"
             >
               EMPID
             </label>
-            <input
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-dark leading-tight focus:outline-none focus:shadow-outline"
-              id="EMPID"
-              type="text"
-              placeholder="EMPID"
-              value={empid}
-              onChange={(e) => {
-                setEmpid(e.target.value);
-                setErrorEmpid(""); // Clear error on change
-              }}
-              required
-            />
+            <div className="relative">
+              <input
+                className={`shadow appearance-none border rounded w-full py-2 px-3 text-dark leading-tight focus:outline-none focus:shadow-outline ${
+                  errorEmpid ? "border-red-500" : ""
+                }`}
+                id="EMPID"
+                type="text"
+                placeholder="EMPID"
+                value={empid}
+                onChange={(e) => {
+                  setEmpid(e.target.value);
+                  setErrorEmpid(""); // Clear error on change
+                }}
+                required
+              />
+              {errorEmpid && (
+                <ExclamationCircleIcon className="w-5 h-5 text-red-500 absolute right-3 top-3" />
+              )}
+            </div>
             {errorEmpid && (
-              <p className="text-red-500 text-sm mb-2">{errorEmpid}</p>
+              <p className="text-white font-bold text-sm mt-2">{errorEmpid}</p>
             )}
           </div>
-          <div className="mb-6">
+          <div className="mb-4 relative">
             <label
               className="block text-white text-sm font-bold mb-2"
               htmlFor="PASS"
             >
               Password
             </label>
-            <input
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-dark mb-3 leading-tight focus:outline-none focus:shadow-outline"
-              id="PASS"
-              type="password"
-              placeholder="PASS"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setErrorPassword(""); // Clear error on change
-              }}
-              required
-            />
+            <div className="relative">
+              <input
+                className={`shadow appearance-none border rounded w-full py-2 px-3 text-dark leading-tight focus:outline-none focus:shadow-outline ${
+                  errorPassword ? "border-red-500" : ""
+                }`}
+                id="PASS"
+                type="password"
+                placeholder="PASS"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setErrorPassword(""); // Clear error on change
+                }}
+                required
+              />
+              {errorPassword && (
+                <ExclamationCircleIcon className="w-5 h-5 text-red-500 absolute right-3 top-3" />
+              )}
+            </div>
             {errorPassword && (
-              <p className="text-red-500 text-sm mb-2">{errorPassword}</p>
+              <p className="text-white font-bold text-sm mt-2">{errorPassword}</p>
             )}
           </div>
-          <div className="mb-6">
+          <div className="mb-4 relative">
             <label
               className="block text-white text-sm font-bold mb-2"
               htmlFor="email"
             >
               Email
             </label>
-            <input
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-dark mb-3 leading-tight focus:outline-none focus:shadow-outline"
-              id="email"
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setErrorEmail(""); // Clear error on change
-              }}
-              required
-            />
+            <div className="relative">
+              <input
+                className={`shadow appearance-none border rounded w-full py-2 px-3 text-dark leading-tight focus:outline-none focus:shadow-outline ${
+                  errorEmail ? "border-red-500" : ""
+                }`}
+                id="email"
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setErrorEmail(""); // Clear error on change
+                }}
+                required
+              />
+              {errorEmail && (
+                <ExclamationCircleIcon className="w-5 h-5 text-red-500 absolute right-3 top-3" />
+              )}
+            </div>
             {errorEmail && (
-              <p className="text-red-500 text-sm mb-2">{errorEmail}</p>
+              <p className="text-white font-bold text-sm mt-2">{errorEmail}</p>
             )}
           </div>
           {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
