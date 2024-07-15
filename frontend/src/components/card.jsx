@@ -49,7 +49,7 @@ export function StatusCard({ title, status }) {
                      </p>
                   </div>
                   <div className="bg-[#9ca3af] rounded-xl py-6 px-6 text-white">
-                     <h1>Total Faktur Waiting Validate</h1>
+                     <h1>Total Faktur Waiting Confirm</h1>
                      <p className="font-medium text-xl mt-2">
                         {data.total_faktur_waiting}
                      </p>

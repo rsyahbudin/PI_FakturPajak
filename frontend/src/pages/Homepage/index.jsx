@@ -116,7 +116,9 @@ function Homepage() {
     setIsLoading(true); // Mengatur isLoading menjadi true saat proses pengiriman dimulai
     try {
       const isConfirmed = window.confirm(
-        "Apakah email sudah benar? Faktur akan dikirim melalui email tersebut."
+        language === "id"
+          ? "Apakah email sudah benar? Faktur akan dikirim melalui email tersebut."
+          : "Is the email correct? The invoice will be sent to that email."
       );
 
       if (isConfirmed) {
@@ -162,7 +164,9 @@ function Homepage() {
         );
 
         toast.success(
-          "Email konfirmasi permintaan sudah dikirimkan ke email yang tercantum, harap segera lakukan konfirmasi permintaan Anda",
+          language === "id"
+            ? "Email konfirmasi permintaan sudah dikirimkan ke email yang tercantum, harap segera lakukan konfirmasi permintaan Anda"
+            : "IThe request confirmation email has been sent to the listed email address. Please confirm your request promptly.",
           {
             position: "top-right",
             autoClose: false,
@@ -193,23 +197,30 @@ function Homepage() {
       console.error("Error:", error.message);
       if (error.response && error.response.status === 404) {
         setError("ID Transaksi tidak ditemukan");
-        toast.error("ID Transaksi tidak ditemukan", {
-          position: "top-right",
-          autoClose: 4000,
-          hideProgressBar: true,
-          closeOnClick: true,
-          pauseOnHover: false,
-          draggable: true,
-          progress: undefined,
-          theme: "colored",
-          transition: Bounce,
-        });
+        toast.error(
+          language === "id"
+            ? "ID Transaksi tidak ditemukan"
+            : "Transaction ID not found",
+          {
+            position: "top-right",
+            autoClose: 4000,
+            hideProgressBar: true,
+            closeOnClick: true,
+            pauseOnHover: false,
+            draggable: true,
+            progress: undefined,
+            theme: "colored",
+            transition: Bounce,
+          }
+        );
       } else if (error.response && error.response.status === 400) {
         setError(
           `Mohon maaf permintaan faktur pajak dengan nomor struk ${form.TT_TRXNO} tidak bisa dibuatkan karena sudah melebihi batas ketentuan.  Lihat ketentuannya pada saat pengisian formulir faktur pajak.`
         );
         toast.error(
-          `Mohon maaf permintaan faktur pajak dengan nomor struk ${form.TT_TRXNO} tidak bisa dibuatkan karena sudah melebihi batas ketentuan.  Lihat ketentuannya pada saat pengisian formulir faktur pajak.`,
+          language === "id"
+            ? `Mohon maaf permintaan faktur pajak dengan nomor struk ${form.TT_TRXNO} tidak bisa dibuatkan karena sudah melebihi batas ketentuan.  Lihat ketentuannya pada saat pengisian formulir faktur pajak.`
+            : `Sorry, the tax invoice request with receipt number ${form.TT_TRXNO} cannot be created because it has exceeded the stipulated limit. Please refer to the terms when filling out the tax invoice form.`,
           {
             position: "top-right",
             autoClose: false,
@@ -237,17 +248,22 @@ function Homepage() {
         });
       } else {
         setError("ID Transaksi sudah dibuatkan Faktur Pajaknya");
-        toast.error("ID Transaksi sudah dibuatkan Faktur Pajaknya", {
-          position: "top-right",
-          autoClose: false,
-          hideProgressBar: true,
-          closeOnClick: true,
-          pauseOnHover: false,
-          draggable: true,
-          progress: undefined,
-          theme: "colored",
-          transition: Bounce,
-        });
+        toast.error(
+          language === "id"
+            ? "ID Transaksi sudah dibuatkan Faktur Pajaknya"
+            : "Transaction has already been created.",
+          {
+            position: "top-right",
+            autoClose: false,
+            hideProgressBar: true,
+            closeOnClick: true,
+            pauseOnHover: false,
+            draggable: true,
+            progress: undefined,
+            theme: "colored",
+            transition: Bounce,
+          }
+        );
       }
     } finally {
       setIsLoading(false); // Menyembunyikan loading spinner setelah proses pengiriman selesai

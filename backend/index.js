@@ -1181,9 +1181,6 @@ app.post("/api/login", (req, res) => {
 
 
 
-
-
-
 app.post("/api/register", async (req, res) => {
   const { empid, password, email } = req.body;
 
