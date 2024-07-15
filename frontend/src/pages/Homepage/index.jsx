@@ -166,7 +166,7 @@ function Homepage() {
         toast.success(
           language === "id"
             ? "Email konfirmasi permintaan sudah dikirimkan ke email yang tercantum, harap segera lakukan konfirmasi permintaan Anda"
-            : "IThe request confirmation email has been sent to the listed email address. Please confirm your request promptly.",
+            : "The request confirmation email has been sent to the listed email address. Please confirm your request promptly.",
           {
             position: "top-right",
             autoClose: false,
@@ -202,8 +202,8 @@ function Homepage() {
             ? "ID Transaksi tidak ditemukan"
             : "Transaction ID not found",
           {
+            autoClose: false,
             position: "top-right",
-            autoClose: 4000,
             hideProgressBar: true,
             closeOnClick: true,
             pauseOnHover: false,
