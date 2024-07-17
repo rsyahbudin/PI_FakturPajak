@@ -22,9 +22,15 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+*.env
+
 
 # Ignore backend attachment and uploads folders
-./backend/attachment/
-./backend/uploads/
-./backend/.env
+/backend/attachment/
+/backend/uploads/
+/backend/.env
 .env
+../backend/.env
+./backend/.env
+
+

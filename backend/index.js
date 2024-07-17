@@ -413,7 +413,7 @@ async function sendConfirmationEmail(
       service: "gmail",
       auth: {
         type: "OAuth2",
-        user: "syahbudinpenting@gmail.com", // Ganti dengan email pengirim Anda
+        user: "fakturpajakpi@gmail.com", // Ganti dengan email pengirim Anda
         clientId: CLIENT_ID,
         clientSecret: CLIENT_SECRET,
         refreshToken: REFRESH_TOKEN,
@@ -423,7 +423,7 @@ async function sendConfirmationEmail(
 
     const confirmationLink = `http://localhost:3001/api/confirm-email/${TRXNO}`;
     const mailOptions = {
-      from: "syahbudinpenting@gmail.com",
+      from: "fakturpajakpi@gmail.com",
       to: email,
       subject: "Konfirmasi Email",
       html: `<p>Dear ${TT_NAMA},</p>
@@ -555,7 +555,7 @@ async function sendEmail(TRXNO, filePath, mailTo) {
       service: "gmail",
       auth: {
         type: "OAuth2",
-        user: "syahbudinpenting@gmail.com", // Ganti dengan email pengirim Anda
+        user: "fakturpajakpi@gmail.com", // Ganti dengan email pengirim Anda
         clientId: CLIENT_ID,
         clientSecret: CLIENT_SECRET,
         refreshToken: REFRESH_TOKEN,
@@ -585,7 +585,7 @@ async function sendEmail(TRXNO, filePath, mailTo) {
         } = customerData;
 
         const mailOptions = {
-          from: "syahbudinpenting@gmail.com",
+          from: "fakturpajakpi@gmail.com",
           to: mailTo,
           subject: "Request Faktur Pajak",
           html: `
@@ -1090,7 +1090,7 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
       service: "gmail",
       auth: {
         type: "OAuth2",
-        user: "syahbudinpenting@gmail.com", // Ganti dengan email pengirim Anda
+        user: "fakturpajakpi@gmail.com", // Ganti dengan email pengirim Anda
         clientId: CLIENT_ID,
         clientSecret: CLIENT_SECRET,
         refreshToken: REFRESH_TOKEN,
@@ -1099,7 +1099,7 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
     });
 
     const mailOptions = {
-      from: "syahbudinpenting@gmail.com",
+      from: "fakturpajakpi@gmail.com",
       to: TT_EMAIL,
       subject: "File Faktur",
       html: `<p>Dear Bapak / Ibu ${TT_NAMA},</p>
@@ -1289,7 +1289,7 @@ const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     type: "OAuth2",
-    user: "syahbudinpenting@gmail.com", // Ganti dengan email pengirim Anda
+    user: "fakturpajakpi@gmail.com", // Ganti dengan email pengirim Anda
     clientId: CLIENT_ID,
     clientSecret: CLIENT_SECRET,
     refreshToken: REFRESH_TOKEN,
@@ -1340,7 +1340,7 @@ const j = schedule.scheduleJob("00 09 * * *", function () {
         // Jika ada hasil dari query1, kirim email
         if (results1.length > 0) {
           const mailOptions1 = {
-            from: "syahbudinpenting@gmail.com",
+            from: "fakturpajakpi@gmail.com",
             to: `${emailReceiver},${emailSPV}`,
             subject:
               "Reminder: Tiket Status OPEN Telah Melewati Batas Waktu 3 Hari ",
@@ -1413,7 +1413,7 @@ const j = schedule.scheduleJob("00 09 * * *", function () {
         // Jika ada hasil dari query2, kirim email
         if (results2.length > 0) {
           const mailOptions2 = {
-            from: "syahbudinpenting@gmail.com",
+            from: "fakturpajakpi@gmail.com",
             to: `${emailReceiver},${emailSPV}`,
             subject:
               "Reminder: Tiket Status ON PROGRESS Telah Melewati Batas Waktu 10 Hari ",
